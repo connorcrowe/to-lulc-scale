@@ -14,3 +14,14 @@
 - Begin predicting slices
 - Design post-processing algorithm
 - Determine webmap hosting solution
+
+**Structure**:
+to-lulc-scale/
+|-- data/               # WMS tiles and predicted tiles
+|-- model/              # Trained models
+|-- scripts/
+|   |-- slicer.py       # Slice WMS into tiles
+|   |-- predictor.py    # Predict lulc on slices
+|   |-- processor.py    # Convert predictions for display
+|-- webmap/             # For visualising results 
+|-- notebooks/          # Experiments & testing
