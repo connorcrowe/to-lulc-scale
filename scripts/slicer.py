@@ -3,6 +3,8 @@
 
 # Imports
 import os
+os.environ["PROJ_DATA"] = os.path.join(os.environ["VIRTUAL_ENV"], "Lib", "site-packages", "rasterio", "proj_data")
+
 import requests
 from owslib.wms import WebMapService
 
@@ -11,12 +13,11 @@ from io import BytesIO
 
 import numpy as np
 
-os.environ["PROJ_DATA"] = os.path.join(os.environ["VIRTUAL_ENV"], "Lib", "site-packages", "rasterio", "proj_data")
+
 import rasterio
 import rasterio.plot
 from rasterio.transform import from_bounds
 
-from pyproj import Transformer
 from tqdm import tqdm
 from itertools import product
 
@@ -26,24 +27,23 @@ wms_url = "https://gis.toronto.ca/arcgis/services/basemap/cot_ortho/MapServer/WM
 # Directory to save files to
 output_dir = "data/tiles/"
 
-# TRANSFORMERS - Used to turn lat/lon coords to UTM (for adding steps in meters) and back
-to_utm = Transformer.from_crs("EPSG:4326", "EPSG:32617", always_xy=True)
-to_latlon = Transformer.from_crs("EPSG:32617", "EPSG:4326", always_xy=True)
+# Set tile dimensions and resolution
+tile_size_m = 512
+tile_resolution = 512
+meters_per_pixel = tile_size_m / tile_resolution
 
-# EXTENT - Lat/Lon extent of the WMS aerial image
-#min_lon, max_lon = -79.6799539999999951, -79.0702129999999954
-#min_lat, max_lat = 43.5483800000000016, 43.9100490000000008 
-min_lon, max_lon = -79.6516774965740666, -79.1001631049245191
-min_lat, max_lat = 43.5712933809708431, 43.8656125139796274
+# EXTENT 
+# - Lat/Lon extent of the WMS aerial image
+#min_lon, max_lon = -79.6516774965740666, -79.1001631049245191
+#min_lat, max_lat = 43.5712933809708431, 43.8656125139796274
+# - ESPG:3857 Extent (m)
+min_x, min_y = -8866839.3637663740664721,5399347.6239214604720473 
+max_x, max_y = -8805463.7355606518685818,5444639.5874546216800809
 
-# UTM EXTENT - Set WMS aerial bounding box coords to UTM 
-min_x, min_y = to_utm.transform(min_lon, min_lat)
-max_x, max_y = to_utm.transform(max_lon, max_lat)
+x_steps = np.arange(min_x, max_x, tile_size_m)
+y_steps = np.arange(min_y, max_y, tile_size_m)
 
-# TILE COORDS - Create list of coords of tiles to request
-step = 256
-x_coords = np.arange(min_x, max_x, step)
-y_coords = np.arange(min_y, max_y, step)
+tiles = list(product(x_steps, y_steps))
 
 def request_slice(bounding_box, resolution=512):
     """
@@ -63,7 +63,7 @@ def request_slice(bounding_box, resolution=512):
         'bbox': ','.join(map(str, bounding_box)),
         'width': resolution,
         'height': resolution,
-        'srs': 'EPSG:4326',
+        'srs': 'EPSG:3857',
         'format': 'image/tiff'
     })
 
@@ -84,61 +84,44 @@ def request_slice(bounding_box, resolution=512):
     return image, meta
 
 # MAIN LOOP
-stop_after = 10
-skipped = 0
-broken = 0
-saved = 0
-existing = 0
-tiles = list(product(x_coords, y_coords))
+stop_after = 5000
+skipped, broken, saved = 0, 0, 0
 
 for x, y in tqdm(tiles, desc="Downloading tiles"):
-    if stop_after <= 0: break
+    if saved >= stop_after: break
     
-
     # Set filepath based on tile origin
     filename = f"tile_{int(x)}_{int(y)}.tif"
     filepath = os.path.join(output_dir, filename)
+    if os.path.exists(filepath): continue
 
-    # Skip if tile already saved to dir
-    if os.path.exists(filepath): 
-        existing += 1
-        continue
-
-    # Get lat/lon coords of upper left and bottom right corners
-    ul_lon, ul_lat = to_latlon.transform(x, y + step)
-    lr_lon, lr_lat = to_latlon.transform(x + step, y)    
+    bbox = [x, y, x + tile_size_m, y + tile_size_m]
 
     # Request image tile from WMS
     try:
-        image, meta = request_slice([ul_lon, lr_lat, lr_lon, ul_lat])
+        image, meta = request_slice(bbox, tile_resolution)
+
+        # Skip image if mostly white pixels (borders)
+        if np.mean(np.array(image)) > 250: continue
+
+        # Save tile as GeoTIFF
+        with rasterio.open(
+            filepath, "w",
+            driver="GTiff",
+            height=tile_resolution, 
+            width=tile_resolution,
+            count=3,
+            dtype='uint8',
+            crs="EPSG:3857",
+            transform=from_bounds(*bbox, tile_resolution, tile_resolution)
+        ) as dst:
+            dst.write(image)
+    
     except Exception as e:
         broken += 1
-        #print(f"\nSkipping tile at ({x}, {y}) due to error: {e}")
-        continue
+        print(f"\nFailed to write tile {filename}: {e}")
 
-    # Skip image if mostly white pixels (borders)
-    if np.mean(np.array(image)) > 250: 
-        skipped += 1
-        continue
-
-    # Create affine transform from bounding box
-    transform = from_bounds(ul_lon, lr_lat, lr_lon, ul_lat, 512, 512)
-
-    # Save tile as GeoTIFF
-    with rasterio.open(
-        filepath, "w",
-        driver="GTiff",
-        height=512, width=512,
-        count=3,
-        dtype='uint8',
-        crs="EPSG:4326",
-        transform=transform
-    ) as dst:
-        dst.write(image)
     saved += 1
-    stop_after -= 1
 
-print(f'Existing:      {existing}')
 print(f'Tiles Broken:  {broken}')
-print(f'Tiles Skipped: {skipped}')
 print(f'Tiles Saved:   {saved}')
