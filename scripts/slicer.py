@@ -32,11 +32,11 @@ WMS_URL = "https://gis.toronto.ca/arcgis/services/basemap/cot_ortho/MapServer/WM
 DIR_OUT_TILES = "data/tiles/"
 
 # Set tile dimensions and resolution
-tile_size_m = 512
-tile_resolution = 512
-meters_per_pixel = tile_size_m / tile_resolution
+tile_resolution = 2048
+tile_size_m = 1024
+#meters_per_pixel = tile_size_m / tile_resolution
 
-def request_slice(bounding_box, resolution=512):
+def request_slice(bounding_box, resolution):
     """
     Requests a aerial tile with specific bounding box and resolution from the WMS of the larger City of Toronto aerial map.
 
@@ -87,7 +87,7 @@ def main():
 
     tiles = list(product(x_steps, y_steps))
 
-    broken, saved = 0, 0, 0
+    broken, saved = 0, 0
 
     for x, y in tqdm(tiles, desc="Downloading tiles"):
         
@@ -106,19 +106,22 @@ def main():
             # Skip image if mostly white pixels (borders)
             if np.mean(np.array(image)) > 250: continue
 
+            # Compute transform from bbox and tile size
+            transform = from_bounds(*bbox, tile_resolution, tile_resolution)
+
             # Save tile as GeoTIFF
-            with rasterio.open(
-                filepath, "w",
-                driver="GTiff",
-                height=tile_resolution, 
-                width=tile_resolution,
-                count=3,
-                dtype='uint8',
-                crs="EPSG:3857",
-                transform=from_bounds(*bbox, tile_resolution, tile_resolution)
-            ) as dst:
-                dst.write(image)
-        
+            meta.update({
+                "driver": "GTiff",
+                "height": tile_resolution,
+                "width": tile_resolution,
+                "count": 3,
+                "crs":"EPSG:3857",
+                "transform": transform
+            })
+
+            with rasterio.open(filepath, "w", **meta) as dest:
+                dest.write(image)
+
         except Exception as e:
             broken += 1
             print(f"\nFailed to write tile {filename}: {e}")
