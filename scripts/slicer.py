@@ -24,19 +24,43 @@ from PIL import Image
 from io import BytesIO
 from tqdm import tqdm
 from itertools import product
+from pyproj import Transformer
+
+
+import matplotlib.pyplot as plt
+from rasterio.plot import reshape_as_image
 
 # WMS - Aerial Map of the City of Toronto
-WMS_URL = "https://gis.toronto.ca/arcgis/services/basemap/cot_ortho/MapServer/WMSServer"
+WMS_URL = "https://gis.toronto.ca/arcgis/rest/services/basemap/cot_ortho_2023_color_10cm/MapServer/export"
 
 # Directory to save files to
 DIR_OUT_TILES = "data/tiles/"
 
 # Set tile dimensions and resolution
-tile_resolution = 2048
-tile_size_m = 1024
-#meters_per_pixel = tile_size_m / tile_resolution
+tile_resolution = 704
+tile_size_m = 352
 
-def request_slice(bounding_box, resolution):
+# Calculate meters/pixel based on target tile size and resolution
+meters_per_pixel = tile_size_m / tile_resolution  # Should be 0.5 m/px
+
+# Convert meters to EPSG:3857 units per pixel at TARGET_LAT
+pixel_spacing_x = meters_per_pixel 
+pixel_spacing_y = meters_per_pixel  
+
+# Calculate step size in projected units for a 1024x1024m tile
+tile_size_x_units = pixel_spacing_x * tile_resolution
+tile_size_y_units = pixel_spacing_y * tile_resolution
+
+def meters_to_webmercator_bounds(x_center, y_center, width_units, height_units):
+    """
+    Given a center point in EPSG:3857 and tile size in Web Mercator units,
+    returns a bounding box [xmin, ymin, xmax, ymax].
+    """
+    half_w = width_units / 2.0
+    half_h = height_units / 2.0
+    return [x_center - half_w, y_center - half_h, x_center + half_w, y_center + half_h]
+
+def old_request_slice(bounding_box, resolution):
     """
     Requests a aerial tile with specific bounding box and resolution from the WMS of the larger City of Toronto aerial map.
 
@@ -74,53 +98,71 @@ def request_slice(bounding_box, resolution):
     
     return image, meta
 
+def request_slice(bounding_box, resolution, out_path):
+    """
+    Requests a aerial tile with specific bounding box and resolution from the ARCGIS api of the larger City of Toronto aerial map and saves it to a file.
+
+    @bounding_box - Bounding box of lat lon coords to define the tile (upper left lon, lower right lat, lower right lon, upper right lat)
+    @resolution   - Ouput resolution of each tile, resolution x resolution, in pixels
+    """
+    params = {
+        "f": "image",
+        "bbox": ",".join(map(str, bounding_box)),
+        "bboxSR": "3857",
+        "imageSR": "3857",
+        "size": f"{resolution},{resolution}",
+        "format": "tiff",
+        "transparent": "false"
+    }
+    
+    response = requests.get(WMS_URL, params=params)
+
+    image = Image.open(BytesIO(response.content))
+    
+    image_np = np.array(image)
+
+    if np.mean(image_np) > 245: return 
+    transform = from_bounds(*bounding_box, width=resolution, height=resolution)
+
+    # Save as GeoTIFF
+    with rasterio.open(
+        out_path,
+        "w",
+        driver="GTiff",
+        height=resolution,
+        width=resolution,
+        count=3,
+        dtype=image_np.dtype,
+        crs="EPSG:3857",
+        transform=transform
+    ) as dst:
+        for i in range(3):
+            dst.write(image_np[:, :, i], i + 1) 
+
 def main():
-    # EXTENT 
-    # - Lat/Lon extent of the WMS aerial image
-    #min_lon, max_lon = -79.6516774965740666, -79.1001631049245191 #min_lat, max_lat = 43.5712933809708431, 43.8656125139796274
-    # - ESPG:3857 Extent (m)
-    min_x, min_y = -8866839.3637663740664721,5399347.6239214604720473 
-    max_x, max_y = -8805463.7355606518685818,5444639.5874546216800809
+    # ESPG:3857 extent (in meters)
+    min_x, min_y = -8866839.3637663740664721, 5399347.6239214604720473 
+    max_x, max_y = -8805463.7355606518685818, 5444639.5874546216800809
 
     x_steps = np.arange(min_x, max_x, tile_size_m)
     y_steps = np.arange(min_y, max_y, tile_size_m)
 
     tiles = list(product(x_steps, y_steps))
 
-    broken, saved = 0, 0
+    saved = 0 
 
     for x, y in tqdm(tiles, desc="Downloading tiles"):
         
-        # Set filepath based on tile origin
         filename = f"tile_{int(x)}_{int(y)}.tif"
         filepath = os.path.join(DIR_OUT_TILES, filename)
         if os.path.exists(filepath): continue
 
-        # Set bounding box of tile to request
-        bbox = [x, y, x + tile_size_m, y + tile_size_m]
+        center_x = x + tile_size_x_units / 2
+        center_y = y + tile_size_y_units / 2
+        bbox = meters_to_webmercator_bounds(center_x, center_y, tile_size_x_units, tile_size_y_units)
 
-        # Request image tile from WMS
         try:
-            image, meta = request_slice(bbox, tile_resolution)
-
-            # Skip image if mostly white pixels (borders)
-            if np.mean(np.array(image)) > 250: continue
-
-            # Compute transform from bbox and tile size
-            transform = from_bounds(*bbox, tile_resolution, tile_resolution)
-
-            # Save tile as GeoTIFF
-            meta.update({
-                "driver": "GTiff",
-                "height": tile_resolution,
-                "width": tile_resolution,
-                "count": 3,
-                "crs":"EPSG:3857",
-                "transform": transform
-            })
-
-            with rasterio.open(filepath, "w", **meta) as dest:
-                dest.write(image)
+            request_slice(bbox, tile_resolution, filepath)
 
         except Exception as e:
             broken += 1
@@ -128,7 +170,6 @@ def main():
 
         saved += 1
 
-    print(f'Tiles Broken:  {broken}')
     print(f'Tiles Saved:   {saved}')
 
 if __name__ == "__main__": main()
