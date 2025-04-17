@@ -45,7 +45,7 @@ def import_tiles():
                 yield (image, src.meta.copy(), filename)
 
 # Function - Predict tile
-def predict_tile(model, tile):
+def old_predict_tile(model, tile):
     """
     Runs LULC model on a single tile
     """
@@ -73,6 +73,67 @@ def predict_tile(model, tile):
     prediction_classes = np.argmax(prediction_unpatched, axis=-1)                       # (2048, 2048)
     
     return prediction_classes
+
+# Function - Predict tile
+def predict_tile(model, tile):
+    """
+    Runs LULC model on a single tile
+    """
+    # Reshape from (bands, size, size) to (size, size, bands)  
+    tile_reshaped = reshape_as_image(tile)                                              #  (2048, 2048, 3)
+    tile_size = tile_reshaped.shape[0]
+    print("tile_reshaped: ", tile_reshaped.shape)
+
+    # Split into patches of model input size to predict (128 x 128)
+    patch_size = 128
+    patch_step = 64
+    patches = patchify(tile_reshaped, (patch_size, patch_size, 3), step = patch_step)   # (16, 16, 128, 128, 3)
+    print("patches: ", patches.shape)
+
+    # Flatten to one list of patch_size x patch_size patches
+    patches_reshaped = patches.reshape(-1, patch_size, patch_size, 3)                   # (256, 128, 128, 3)
+    print("patches_reshaped: ", patches_reshaped.shape)
+    
+    # Predict patches
+    prediction = model.predict(patches_reshaped)                                        # (256, 128, 128, 5)
+    print("prediction: ", prediction.shape)
+
+    # Unpatchify back to original shape
+    prediction_reshaped = prediction.reshape(
+        patches.shape[0], patches.shape[0], patch_size, patch_size, 5)               # (4, 4, 1, 128, 128, 5)
+    print("prediction_reshaped: ", prediction_reshaped.shape)
+
+    # Collapse to highest likelihood class for each pixel
+    prediction_classes = np.argmax(prediction_reshaped, axis=-1)                       # (2048, 2048)
+    print("prediction_classes: ", prediction_classes.shape)
+
+    # REASSEMBLE IMAGE
+    blended_prediction = np.zeros((patches.shape[0] * patch_step + patch_size,
+                                   patches.shape[0] * patch_step + patch_size), dtype=np.float32)
+    weight_matrix = np.zeros_like(blended_prediction, dtype=np.float32)
+
+    print("weight_matrix: ", weight_matrix.shape)
+
+    # Blend patches
+    for i in range(patches.shape[0]):
+        for j in range(patches.shape[0]):
+            x_start = i * patch_step
+            x_end = x_start + patch_size
+            y_start = j * patch_step
+            y_end = y_start + patch_size
+
+            blended_prediction[x_start:x_end, y_start:y_end] += prediction_classes[i, j]
+            weight_matrix[x_start:x_end, y_start:y_end] += 1
+    
+    print("blended_prediction: ", blended_prediction.shape)
+   
+    prediction_result = (blended_prediction / weight_matrix).astype(np.float32)
+    print("prediction_result: ", prediction_result.shape)
+
+    prediction_result = prediction_result[:2048, :2048]
+    
+    print("prediction_result: ", prediction_result.shape)
+    return prediction_result
 
 # Function - Save tile
 def save_tile(prediction, meta, filepath):
@@ -107,7 +168,7 @@ def main():
     tiles = import_tiles()
 
     # Lazy load tile, predict, save and garbage collect
-    stop_after = 1
+    stop_after = 20
     for tile_image, meta, filename in tiles:
         if stop_after <= 0: break
         stop_after -= 1
