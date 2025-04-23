@@ -121,7 +121,7 @@ def request_slice(bounding_box, resolution, out_path):
     
     image_np = np.array(image)
 
-    if np.mean(image_np) > 245: return 
+    if np.mean(image_np) > 253: return 
     transform = from_bounds(*bounding_box, width=resolution, height=resolution)
 
     # Save as GeoTIFF
@@ -149,7 +149,7 @@ def main():
 
     tiles = list(product(x_steps, y_steps))
 
-    saved = 0 
+    saved, broken = 0, 0
 
     for x, y in tqdm(tiles, desc="Downloading tiles"):
         
@@ -171,5 +171,6 @@ def main():
         saved += 1
 
     print(f'Tiles Saved:   {saved}')
+    print(f'Tiles Broke:   {broken}')
 
 if __name__ == "__main__": main()
