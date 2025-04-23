@@ -10,6 +10,7 @@ import os
 import rasterio
 
 import numpy as np
+import tensorflow as tf
 import matplotlib.pyplot as plt
 import tensorflow.keras.backend as K
 
@@ -23,6 +24,9 @@ from pyproj import datadir
 
 # Use pyproj's known-good proj.db location
 os.environ["PROJ_DATA"] = str(datadir.get_data_dir())
+
+tf.config.threading.set_intra_op_parallelism_threads(6) # Maximum parallel CPU threads to allocate
+tf.config.threading.set_inter_op_parallelism_threads(6)
 
 # Set directories
 DIR_IN_TILES = 'data/tiles/'
@@ -130,16 +134,16 @@ def main():
     tiles = import_tiles()
 
     # Lazy load tile, predict, save and garbage collect
-    stop_after = 2000
+    stop_after = 13000
     for tile_image, meta, filename in tiles:
         if stop_after <= 0: break
         stop_after -= 1
 
         # Skip if already predicted
-        print(f"Processing: {filename}")
+        #print(f"Processing: {filename}")
         out_path = os.path.join(DIR_OUT_PREDICTIONS, f'pred_{filename}')
         if os.path.exists(out_path): 
-            print('skip')
+            #print('skip')
             continue
 
        # Predict
