@@ -21,6 +21,7 @@ The 12,088 prediction tiles in GeoTIFF format were merged with GDAL into a singl
 A simple Vite web app was setup so that the results could be displayed with Leaflet. The tiles allow for different resolutions at different zoom levels, allowing for high resolution while zoomed in.
 
 **Structure**:
+```
 to-lulc-scale/
 |-- data/               # WMS tiles and predicted tiles
 |-- model/              # Trained models
@@ -29,3 +30,4 @@ to-lulc-scale/
 |   |-- predictor.py    # Predict lulc on slices
 |-- webmap/             # For visualising results 
 |-- notebooks/          # Experiments & testing
+```
