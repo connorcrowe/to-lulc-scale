@@ -15,10 +15,10 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 }).addTo(map);
 
 // Add prediction tiles layer
-L.tileLayer("tiles/{z}/{x}/{y}.png", {
+const predictionLayer = L.tileLayer("tiles_colour/{z}/{x}/{y}.png", {
   tms: true, 
   attribution: "LULC Predictions",
-  opacity: 1,
+  opacity: 0.9,
 }).addTo(map);
 
 // Toggle logic
