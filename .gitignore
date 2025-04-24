@@ -4,3 +4,7 @@ model
 data
 
 /webmap/node_modules
+node_modules
+webmap/public
+
+lulc-scale-qgis.qgz
