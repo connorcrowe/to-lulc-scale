@@ -1,0 +1,6 @@
+.venv
+/notebooks/.ipynb_checkpoints
+model
+data
+
+/webmap/node_modules

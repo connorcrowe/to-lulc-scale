@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>LULC Toronto WebMap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      #map {
+        height: 85vh;
+        width: 100%;
+      }
+      #controls {
+        padding: 10px;
+        background-color: white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        position: absolute;
+        top: 100px;
+        left: 10px;
+        z-index: 1000;
+        border-radius: 4px;
+      }
+      #info-box {
+        padding: 10px;
+        background-color: white;
+        border-top: 1px solid #ccc;
+        font-size: 0.9rem;
+      }
+    </style>
+    <script type="module" crossorigin src="/to-lulc-scale/webmap/assets/index-CuSEjgvU.js"></script>
+    <link rel="stylesheet" crossorigin href="/to-lulc-scale/webmap/assets/index-CIGW-MKW.css">
+  </head>
+  <body>
+    <div id="controls">
+      <button id="toggle-prediction">Hide Prediction</button>
+    </div>
+    <div id="map"></div>
+    <div id="info-box">
+      <h2>Land Use / Land Cover Classification of Toronto @ Scale.</h2>
+      <p>Land Use (road, pavement, building, vegetation, water) predicted using custom U-Net CNN trained on custom labelled data.</p>
+      <p>Connor Crowe | <a href="https://github.com/your-repo-url" target="_blank">GitHub Repo</a></p>
+      <p>
+      <i>Aerial data for training & prediction from <a href="https://gis.toronto.ca/arcgis/rest/services/basemap/cot_ortho_2023_color_10cm/MapServer" >City of Toronto ArcGIS REST Services Directory </a></i>
+        
+      </p>
+    </div>
+  </body>
+</html>
