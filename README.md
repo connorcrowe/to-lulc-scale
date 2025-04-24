@@ -1,5 +1,5 @@
-# to-lulc-scale
-**Demo**: TBA
+# Automatic high-res land use classification of the entire City of Toronto using a custom deep learning model.
+**Demo**: [Web Demo](https://connorcrowe.github.io/to-lulc-scale/)
 
 **Objective**: Using the U-Net CNN classifier trained in [to-lulc-aiml](https://github.com/connorcrowe/to-lulc-aiml), predict the land use land cover of the entire City of Toronto
 
