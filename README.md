@@ -1,26 +1,57 @@
 # Automatic high-res land use classification of the entire City of Toronto using a custom deep learning model.
-**Demo**: [Web Demo](https://connorcrowe.github.io/to-lulc-scale/)
+**See the Live Demo**: [Web Demo](https://connorcrowe.github.io/to-lulc-scale/)
 
-**Objective**: Using the U-Net CNN classifier trained in [to-lulc-aiml](https://github.com/connorcrowe/to-lulc-aiml), predict the land use land cover of the entire City of Toronto
+**Objective**: *Predict land use land cover (LULC) classification from aerial imagery for the entire City of Toronto area. Specific focus on handling, predicting, and displaying large geospatial data sources with constrained hardware.*
 
-## Project Overview
-This project aimed to predict the LULC of a massive area, to test the limits of the model previously worked on, and to develop the ability to work with larger geospatial data pipelines. 
+## Overview
+This project uses a custom trained U-Net CNN model (made in **[#to-lulc-aiml](https://github.com/connorcrowe/to-lulc-aiml)**) to classify LULC for the entire City of Toronto from high resolution aerial imagery. LULC is a critical tool for urban planning & climate monitoring, but takes significant time and resources to do manually at a large scale. 
 
-## Pipeline
-**Aerial Tiles**
-A python script was written to slice a 2023 aerial image of Toronto into 352 x 352 meter tiles. 
+An automated approach can significantly reduce the resources required to have accurate and up to date LULC, allowing for more proactive planning.
 
-**Predictions**
-A script then ran the U-Net predictor on the tiles. Each tile was split into overlapping patches with results weighted so as to reduce border artifacts within tiles.
-- 5 Classes (road, pavement, building, vegetation, water)
+There are some challenges with dealing with the amount of data required to map an entire city on limited hardware. For this project, automated scripts were created to create smaller tiles of the original aerial image of Toronto, run AI prediction on them, and then post-process them into workable results. Additionally, the resulting predictions must be tiled (with different resolutions at different zoom levels) to display effectively on a web demo. The challenges of scale were the primary learning objective of this project.
+
+**Data sources**
+- [City of Toronto ArcGIS REST Services Directory](https://gis.toronto.ca/arcgis/rest/services/basemap/cot_ortho_2023_color_10cm/MapServer) - 2023 Aerial imagery for model training and prediction
+
+## Components
+**Slicer**
+- The slicer accesses the City of Toronto ArcGIS API and requests a specific area of the overall aerial
+- This is tuned to be a specific size (352 x 352 meters) and resolution (704 x 704 pixels) at specific coordinates
+    - It is important to get the same spatial resolution for all tiles, and that it matches the spatial resolution of the training set
+    - The CRS of ESPG:3857 was used since it was native to the API and allowed for simpler meter indexing in the script
+
+**Predictor**
+- The predictor script checks for aerial tiles and slices them into overlapping patches that match the input shape for model
+- Then the prediction model is run on the tiles, and the overlapping areas are blended
 
 **Processing**
-The 12,088 prediction tiles in GeoTIFF format were merged with GDAL into a single GeoTIFF. Since this file was far to large to work with effectively (22GB) it was then converted with GDAL into a Cloud-Optimized-GeoTIFF (COG). Since the resulting COG was still too large for the memory buffer in the web demo, it was split into tiles with `gdal2tiles.py` so it could be displayed at various resolutions in the demo without requiring the entire image be loaded at once.
+- The 12,000+ tiles needed to be merged into a large GeoTIFF
+- The merged result was colourized (from discrete class labels to colours for the map)
+- GDAL was used to turn the colourized GeoTIFF into displayable image tiles with various zoom levels
 
-**Display**
-A simple Vite web app was setup so that the results could be displayed with Leaflet. The tiles allow for different resolutions at different zoom levels, allowing for high resolution while zoomed in.
+**WebMap**
+- A Vite web app was created to display the results in a live demo
+- Leaflet was used to display the tiles of the predictions effectively
+- The prediction is tiled with GDAL so as to have different resolutions at different zoom levels
 
-**Structure**:
+## Model
+
+## Results
+
+
+## Learning
+- Consistent spatial resolution is very important
+- CRS
+
+## Future Work
+- Automated post processing pipeline
+- Fill in missing aerials
+- Add highways to training set and retrain model
+
+## Appendices 
+**Running**:
+
+**Repo Structure**:
 ```
 to-lulc-scale/
 |-- data/               # WMS tiles and predicted tiles
