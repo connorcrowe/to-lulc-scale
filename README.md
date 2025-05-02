@@ -1,4 +1,4 @@
-# Scalable Deep Learning for High-Resolution Land Use Classification in Toronto
+# Scalable Machine Learning for High-Resolution Land Use Classification in Toronto
 
 ## Overview (TL;DR)
 >This project demonstrates a scalable automated machine learning pipeline to classify land use/land cover (LULC) for the entire City of Toronto (~630 km²) from high-resolution aerial imagery.
