@@ -17,6 +17,7 @@ os.environ["PROJ_DATA"] = os.path.join(os.environ["VIRTUAL_ENV"], "Lib", "site-p
 import numpy as np
 import rasterio
 import rasterio.plot
+import time
 
 from rasterio.transform import from_bounds
 from owslib.wms import WebMapService
@@ -35,6 +36,10 @@ WMS_URL = "https://gis.toronto.ca/arcgis/rest/services/basemap/cot_ortho_2023_co
 
 # Directory to save files to
 DIR_OUT_TILES = "data/tiles/"
+
+# Parameters for retrying failed requests
+MAX_RETRIES = 5
+RETRY_DELAY = 1 # (seconds)
 
 # Set tile dimensions and resolution
 tile_resolution = 704
@@ -152,23 +157,33 @@ def main():
     saved, broken = 0, 0
 
     for x, y in tqdm(tiles, desc="Downloading tiles"):
-        
+    
         filename = f"tile_{int(x)}_{int(y)}.tif"
         filepath = os.path.join(DIR_OUT_TILES, filename)
+
+        # Check if the tile already exists
         if os.path.exists(filepath): continue
 
         center_x = x + tile_size_x_units / 2
         center_y = y + tile_size_y_units / 2
         bbox = meters_to_webmercator_bounds(center_x, center_y, tile_size_x_units, tile_size_y_units)
 
-        try:
-            request_slice(bbox, tile_resolution, filepath)
+        success = False
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                request_slice(bbox, tile_resolution, filepath)
+                success = True
+                break  # Exit retry loop on success
+            except Exception as e:
+                print(f"\nAttempt {attempt} failed for tile {filename}: {e}")
+                if attempt < MAX_RETRIES:
+                    delay = RETRY_DELAY * 1000
+                    time.sleep(delay)
+                else:
+                    broken += 1
 
-        except Exception as e:
-            broken += 1
-            print(f"\nFailed to write tile {filename}: {e}")
-
-        saved += 1
+        if success:
+            saved += 1
 
     print(f'Tiles Saved:   {saved}')
     print(f'Tiles Broke:   {broken}')
