@@ -134,11 +134,8 @@ def main():
     tiles = import_tiles()
 
     # Lazy load tile, predict, save and garbage collect
-    stop_after = 13000
+    saved = 0
     for tile_image, meta, filename in tiles:
-        if stop_after <= 0: break
-        stop_after -= 1
-
         # Skip if already predicted
         #print(f"Processing: {filename}")
         out_path = os.path.join(DIR_OUT_PREDICTIONS, f'pred_{filename}')
@@ -151,6 +148,8 @@ def main():
 
         # Save
         save_tile(prediction, meta, out_path)
+        saved += 1
+    print("Saved: ", saved)
     
 if __name__ == "__main__": main()
 print("Execution complete")
