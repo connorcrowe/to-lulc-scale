@@ -110,7 +110,6 @@ flowchart LR
 **Issues**
 | Issue | Reason | Fix | Example |
 | :- | - | - | - |
-| ***Missing aerials*** | When requesting aerials from the server some returned with incomplete data or errors. | Implement auto-retry into the slicer for failed slices |![](webmap/images/ex4-predict.jpg)|
 | ***Water Shades*** | While water was present in the dataset, shallow beach water, deep water, and water reflecting sunlight directly were not. The model gets confused in varied water with darker blue colours. | Add more varied water examples to training data |![](webmap/images/ex5-predict.jpg)![](webmap/images/ex5-aerial.jpg)|
 | ***Expressways*** | There were no expressway examples in the training set. The model correctly differentiates these highways from their surroundings, but misclassifies them as buildings. | Add expressway examples to  training data |![](webmap/images/ex6-predict.jpg)![](webmap/images/ex6-aerial.jpg)|
 
@@ -134,7 +133,7 @@ With some human correction and further model tuning, automated LULC would unlock
 
 ## Appendices
 **Future Work**
-1. Implement auto-retry logic in slicer to avoid missing failed tiles
+1. ~~Implement auto-retry logic in slicer to avoid missing failed tiles~~
 2. Expand variety of grid patterns, water types, and roadway types in training set
 3. Convert post-processing to automated script
 
