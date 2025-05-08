@@ -22,7 +22,7 @@ const aerialLayer = esri.tiledMapLayer({
 }).addTo(map);
 
 // Add prediction tiles layer
-const predictionLayer = L.tileLayer("tiles_colour/{z}/{x}/{y}.png", {
+const predictionLayer = L.tileLayer("tiles/{z}/{x}/{y}.png", {
   tms: true, 
   attribution: "LULC Predictions",
   opacity: 0.9,
