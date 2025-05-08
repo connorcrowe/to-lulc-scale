@@ -42,6 +42,8 @@
       .legend-color {
         width: 16px;
         height: 16px;
+        min-width: 16px;
+        min-height: 16px;
         display: inline-block;
         margin-right: 6px;
         margin-left: 20px;
@@ -58,11 +60,13 @@
     <div id="info-box">
       <h2>Land Use / Land Cover Classification of Toronto @ Scale.</h2>
       <p>Land Use predicted using custom U-Net CNN trained on custom labelled data. More informatio in repo. </p>
-      <div class="legend-item"><span class="legend-color" style="background-color: #4e88ca;"></span> Water
-      <span class="legend-color" style="background-color: #609b61;"></span> Vegetation
-      <span class="legend-color" style="background-color: #c59864;"></span> Building
-      <span class="legend-color" style="background-color: #20806f;"></span> Road
-      <span class="legend-color" style="background-color: #dcdcdc;"></span> Pavement </div>
+      <div id="legend">
+        <div class="legend-item"><span class="legend-color" style="background-color: #4e88ca;"></span> Water</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #609b61;"></span> Vegetation</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #c59864;"></span> Building</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #20806f;"></span> Road</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #dcdcdc;"></span> Pavement</div>
+      </div>
       <p>Connor Crowe | <a href="https://github.com/your-repo-url" target="_blank">GitHub Repo</a></p>
       <p>
       <i>Aerial data for training & prediction from <a href="https://gis.toronto.ca/arcgis/rest/services/basemap/cot_ortho_2023_color_10cm/MapServer" >City of Toronto ArcGIS REST Services Directory (2023)</a></i>
